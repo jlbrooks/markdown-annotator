@@ -111,6 +111,7 @@ export default function AnnotationView({
   }, [])
 
   const handleTooltipClick = useCallback(() => {
+    if (openingDialogRef.current || showCommentDialog) return
     // Mark that we're opening the dialog (prevents selectionchange from clearing state)
     openingDialogRef.current = true
 
@@ -136,7 +137,13 @@ export default function AnnotationView({
 
     // Reset the flag after a tick
     setTimeout(() => { openingDialogRef.current = false }, 0)
-  }, [])
+  }, [showCommentDialog])
+
+  const handleTooltipPress = useCallback((event) => {
+    event.preventDefault()
+    event.stopPropagation()
+    handleTooltipClick()
+  }, [handleTooltipClick])
 
   // Listen for selection changes to show tooltip
   useEffect(() => {
@@ -431,12 +438,15 @@ export default function AnnotationView({
       {showTooltip && selectionPosition && (
         <button
           onClick={handleTooltipClick}
+          onPointerDown={handleTooltipPress}
+          onTouchStart={handleTooltipPress}
+          onMouseDown={handleTooltipPress}
           style={{
             position: 'fixed',
             left: `${Math.max(24, Math.min(selectionPosition.x - 20, window.innerWidth - 64))}px`,
             top: `${selectionPosition.y - 48}px`, // 40px button + 8px gap above selection
           }}
-          className="z-50 w-10 h-10 bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white rounded-full shadow-lg flex items-center justify-center transition-colors"
+          className="z-50 w-10 h-10 bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white rounded-full shadow-lg flex items-center justify-center transition-colors touch-manipulation select-none"
           aria-label="Add comment"
         >
           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
