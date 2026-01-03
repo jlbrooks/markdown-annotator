@@ -1,8 +1,10 @@
-version: '3.8'
-
 services:
-  markdown-annotator:
-    build: .
+  # Development service with hot-reload
+  markdown-annotator-dev:
+    build:
+      context: .
+      target: development
+    container_name: markdown-annotator-dev
     ports:
       - "5173:5173"
     volumes:
@@ -12,10 +14,26 @@ services:
       - ./vite.config.js:/app/vite.config.js
       - ./tailwind.config.js:/app/tailwind.config.js
       - ./postcss.config.js:/app/postcss.config.js
+      - ./eslint.config.js:/app/eslint.config.js
     environment:
       - NODE_ENV=development
     networks:
       - markdown-annotator-network
+    profiles:
+      - dev
+
+  # Production service with nginx
+  markdown-annotator-prod:
+    build:
+      context: .
+      target: production
+    container_name: markdown-annotator-prod
+    ports:
+      - "8080:80"
+    networks:
+      - markdown-annotator-network
+    profiles:
+      - prod
 
 networks:
   markdown-annotator-network:

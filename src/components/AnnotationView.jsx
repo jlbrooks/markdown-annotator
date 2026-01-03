@@ -12,13 +12,21 @@ export default function AnnotationView({
   onBackToEdit,
 }) {
   const [showCommentDialog, setShowCommentDialog] = useState(false)
+  const [showTooltip, setShowTooltip] = useState(false)
   const [selectedText, setSelectedText] = useState('')
   const [selectionPosition, setSelectionPosition] = useState(null)
   const [copySuccess, setCopySuccess] = useState(false)
   const [copyError, setCopyError] = useState(false)
-  const [showAnnotations, setShowAnnotations] = useState(true)
-  const highlightRef = useRef(null)
+  const [showAnnotations, setShowAnnotations] = useState(() => {
+    if (typeof window === 'undefined') return true
+    return window.matchMedia('(min-width: 768px)').matches
+  })
+  const highlightRefs = useRef([])
   const contentRef = useRef(null)
+  const tooltipRef = useRef(null)
+  const selectionRangeRef = useRef(null)
+  const selectionOffsetsRef = useRef(null)
+  const openingDialogRef = useRef(false)
 
   // Highlight existing annotations in the content
   useEffect(() => {
@@ -38,88 +46,109 @@ export default function AnnotationView({
     // Normalize text nodes after removing marks
     container.normalize()
 
-    // Helper to find and highlight text in text nodes
-    const highlightTextInNode = (node, searchText, annotationId) => {
-      if (node.nodeType === Node.TEXT_NODE) {
-        const index = node.textContent.indexOf(searchText)
-        if (index >= 0) {
-          const range = document.createRange()
-          range.setStart(node, index)
-          range.setEnd(node, index + searchText.length)
-
-          const mark = document.createElement('mark')
-          mark.className = 'bg-amber-100 rounded-sm cursor-pointer hover:bg-amber-200 transition-colors'
-          mark.setAttribute('data-annotation', annotationId)
-          mark.title = 'Click to view annotation'
-
-          try {
-            range.surroundContents(mark)
-            return true
-          } catch (e) {
-            return false
-          }
-        }
-      } else if (node.nodeType === Node.ELEMENT_NODE && node.tagName !== 'MARK') {
-        for (const child of Array.from(node.childNodes)) {
-          if (highlightTextInNode(child, searchText, annotationId)) {
-            return true
-          }
-        }
-      }
-      return false
-    }
-
     // Apply highlights for each annotation
     annotations.forEach((annotation) => {
-      highlightTextInNode(container, annotation.selectedText, annotation.id)
+      const rangeStart = annotation?.range?.start
+      const rangeEnd = annotation?.range?.end
+      const offsets = (Number.isFinite(rangeStart) && Number.isFinite(rangeEnd) && rangeEnd > rangeStart)
+        ? { start: rangeStart, end: rangeEnd }
+        : findOffsetsByText(container, annotation.selectedText)
+
+      if (!offsets) return
+
+      const range = createRangeFromOffsets(container, offsets.start, offsets.end)
+      if (!range) return
+
+      wrapRangeInMarks(container, range, 'annotation-mark', {
+        'data-annotation': annotation.id,
+        title: 'Click to view annotation',
+      })
     })
   }, [annotations, content])
 
   const clearHighlight = useCallback(() => {
-    if (highlightRef.current) {
-      const highlight = highlightRef.current
+    if (highlightRefs.current.length === 0) return
+
+    highlightRefs.current.forEach((highlight) => {
       const parent = highlight.parentNode
-      if (parent) {
-        while (highlight.firstChild) {
-          parent.insertBefore(highlight.firstChild, highlight)
-        }
-        parent.removeChild(highlight)
+      if (!parent) return
+      while (highlight.firstChild) {
+        parent.insertBefore(highlight.firstChild, highlight)
       }
-      highlightRef.current = null
-    }
+      parent.removeChild(highlight)
+    })
+    highlightRefs.current = []
   }, [])
 
-  const handleTextSelection = () => {
-    const selection = window.getSelection()
-    const text = selection.toString().trim()
+  const handleTooltipClick = useCallback(() => {
+    // Mark that we're opening the dialog (prevents selectionchange from clearing state)
+    openingDialogRef.current = true
 
-    if (text.length > 0) {
-      const range = selection.getRangeAt(0)
-      const rect = range.getBoundingClientRect()
-
-      // Create highlight element (blue for active selection)
-      try {
-        const highlight = document.createElement('mark')
-        highlight.className = 'bg-blue-200 ring-2 ring-blue-300 rounded-sm'
-        highlight.setAttribute('data-active', 'true')
-        range.surroundContents(highlight)
-        highlightRef.current = highlight
-      } catch (e) {
-        // surroundContents can fail if selection spans multiple elements
-        // Fall back to no highlight in that case
-      }
-
-      // Clear the browser selection
-      selection.removeAllRanges()
-
-      setSelectedText(text)
-      setSelectionPosition({
-        x: rect.left + rect.width / 2,
-        y: rect.bottom,
-      })
-      setShowCommentDialog(true)
+    // Create highlight from stored range
+    if (selectionRangeRef.current && contentRef.current) {
+      const marks = wrapRangeInMarks(
+        contentRef.current,
+        selectionRangeRef.current,
+        'annotation-mark-active',
+        { 'data-active': 'true' },
+      )
+      highlightRefs.current = marks
     }
-  }
+
+    // Clear browser selection
+    window.getSelection()?.removeAllRanges()
+    selectionRangeRef.current = null
+
+    setShowTooltip(false)
+    setShowCommentDialog(true)
+
+    // Reset the flag after a tick
+    setTimeout(() => { openingDialogRef.current = false }, 0)
+  }, [])
+
+  // Listen for selection changes to show tooltip
+  useEffect(() => {
+    const handleSelectionChange = () => {
+      if (showCommentDialog) return
+
+      const selection = window.getSelection()
+      const text = selection.toString().trim()
+
+      if (text.length > 0 && contentRef.current) {
+        try {
+          const range = selection.getRangeAt(0)
+          if (!contentRef.current.contains(range.commonAncestorContainer)) {
+            return
+          }
+
+          const rect = range.getBoundingClientRect()
+
+          // Store the range for later use
+          selectionRangeRef.current = range.cloneRange()
+          selectionOffsetsRef.current = getRangeOffsets(range, contentRef.current)
+
+          setSelectedText(text)
+          setSelectionPosition({
+            x: rect.left + rect.width / 2,
+            y: rect.top,
+          })
+          setShowTooltip(true)
+        } catch (e) {
+          // Selection might be collapsed or invalid
+        }
+      } else if (showTooltip && !openingDialogRef.current) {
+        // Selection was cleared (but not because we're opening the dialog)
+        selectionRangeRef.current = null
+        selectionOffsetsRef.current = null
+        setShowTooltip(false)
+        setSelectedText('')
+        setSelectionPosition(null)
+      }
+    }
+
+    document.addEventListener('selectionchange', handleSelectionChange)
+    return () => document.removeEventListener('selectionchange', handleSelectionChange)
+  }, [showCommentDialog, showTooltip])
 
   const handleAddComment = (comment) => {
     if (selectedText && comment.trim()) {
@@ -127,10 +156,12 @@ export default function AnnotationView({
         selectedText,
         comment: comment.trim(),
         timestamp: Date.now(),
+        range: selectionOffsetsRef.current,
       })
       clearHighlight()
       setShowCommentDialog(false)
       setSelectedText('')
+      selectionOffsetsRef.current = null
       setSelectionPosition(null)
     }
   }
@@ -138,7 +169,9 @@ export default function AnnotationView({
   const handleCancelComment = () => {
     clearHighlight()
     setShowCommentDialog(false)
+    setShowTooltip(false)
     setSelectedText('')
+    selectionOffsetsRef.current = null
     setSelectionPosition(null)
   }
 
@@ -222,18 +255,17 @@ export default function AnnotationView({
       </div>
 
       {/* Hint text */}
-      <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-40 text-sm text-gray-400 pointer-events-none">
-        Select text to add feedback
+      <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-40 text-sm text-gray-400 pointer-events-none text-center px-4">
+        <span className="hidden sm:inline">Select text to add feedback</span>
+        <span className="sm:hidden">Long-press to select, tap + to comment</span>
       </div>
 
       {/* Main content */}
-      <div
-        className="max-w-3xl mx-auto px-6 py-20"
-        onMouseUp={handleTextSelection}
-      >
+      <div className="max-w-3xl mx-auto px-6 py-20">
         <div
           ref={contentRef}
-          className="bg-white rounded-xl shadow-sm border border-gray-200 p-8 md:p-12 prose prose-slate max-w-none"
+          className="annotation-content bg-white rounded-xl shadow-sm border border-gray-200 p-8 md:p-12 prose prose-slate max-w-none"
+          onContextMenu={(e) => e.preventDefault()}
         >
           <Markdown>{content}</Markdown>
         </div>
@@ -248,6 +280,25 @@ export default function AnnotationView({
             onClearAnnotations={onClearAnnotations}
           />
         </div>
+      )}
+
+      {/* Floating tooltip button - positioned above selection */}
+      {showTooltip && selectionPosition && (
+        <button
+          ref={tooltipRef}
+          onClick={handleTooltipClick}
+          style={{
+            position: 'fixed',
+            left: `${Math.max(24, Math.min(selectionPosition.x - 20, window.innerWidth - 64))}px`,
+            top: `${selectionPosition.y - 48}px`, // 40px button + 8px gap above selection
+          }}
+          className="z-50 w-10 h-10 bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white rounded-full shadow-lg flex items-center justify-center transition-colors"
+          aria-label="Add comment"
+        >
+          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+          </svg>
+        </button>
       )}
 
       {/* Floating comment dialog */}
@@ -275,4 +326,143 @@ function generateFeedbackText(annotations) {
   })
 
   return feedback
+}
+
+function wrapRangeInMarks(container, range, className, attributes) {
+  const marks = []
+  const walker = document.createTreeWalker(container, NodeFilter.SHOW_TEXT)
+  const textNodes = []
+
+  while (walker.nextNode()) {
+    textNodes.push(walker.currentNode)
+  }
+
+  textNodes.forEach((node) => {
+    if (!range.intersectsNode(node)) return
+    if (node.parentElement?.closest('mark[data-annotation], mark[data-active]')) return
+
+    let startOffset = 0
+    let endOffset = node.textContent.length
+
+    if (node === range.startContainer) {
+      startOffset = range.startOffset
+    }
+    if (node === range.endContainer) {
+      endOffset = range.endOffset
+    }
+
+    if (startOffset === endOffset) return
+
+    let target = node
+    if (endOffset < target.textContent.length) {
+      target.splitText(endOffset)
+    }
+    if (startOffset > 0) {
+      target = target.splitText(startOffset)
+    }
+
+    const mark = document.createElement('mark')
+    mark.className = className
+    Object.entries(attributes || {}).forEach(([key, value]) => {
+      mark.setAttribute(key, value)
+    })
+
+    target.parentNode.insertBefore(mark, target)
+    mark.appendChild(target)
+    marks.push(mark)
+  })
+
+  return marks
+}
+
+function createRangeFromOffsets(container, start, end) {
+  if (!container || start == null || end == null || end <= start) return null
+
+  const walker = document.createTreeWalker(container, NodeFilter.SHOW_TEXT)
+  let currentOffset = 0
+  let startNode = null
+  let endNode = null
+  let startOffset = 0
+  let endOffset = 0
+
+  while (walker.nextNode()) {
+    const node = walker.currentNode
+    const nodeLength = node.textContent.length
+    const nextOffset = currentOffset + nodeLength
+
+    if (!startNode && start <= nextOffset) {
+      startNode = node
+      startOffset = Math.max(0, start - currentOffset)
+    }
+
+    if (startNode && end <= nextOffset) {
+      endNode = node
+      endOffset = Math.max(0, end - currentOffset)
+      break
+    }
+
+    currentOffset = nextOffset
+  }
+
+  if (!startNode || !endNode) return null
+
+  const range = document.createRange()
+  range.setStart(startNode, startOffset)
+  range.setEnd(endNode, endOffset)
+  return range
+}
+
+function getRangeOffsets(range, container) {
+  if (!range || !container) return null
+
+  const startRange = range.cloneRange()
+  startRange.selectNodeContents(container)
+  startRange.setEnd(range.startContainer, range.startOffset)
+
+  const endRange = range.cloneRange()
+  endRange.selectNodeContents(container)
+  endRange.setEnd(range.endContainer, range.endOffset)
+
+  let start = getTextLengthFromRange(container, startRange)
+  let end = getTextLengthFromRange(container, endRange)
+
+  if (!Number.isFinite(start) || !Number.isFinite(end)) return null
+  if (end < start) [start, end] = [end, start]
+
+  return { start, end }
+}
+
+function getTextLengthFromRange(container, range) {
+  const walker = document.createTreeWalker(container, NodeFilter.SHOW_TEXT)
+  let length = 0
+
+  while (walker.nextNode()) {
+    const node = walker.currentNode
+    if (!range.intersectsNode(node)) continue
+
+    const nodeRange = document.createRange()
+    nodeRange.selectNodeContents(node)
+
+    const intersection = range.cloneRange()
+    intersection.selectNodeContents(node)
+
+    if (range.compareBoundaryPoints(Range.START_TO_START, nodeRange) > 0) {
+      intersection.setStart(range.startContainer, range.startOffset)
+    }
+    if (range.compareBoundaryPoints(Range.END_TO_END, nodeRange) < 0) {
+      intersection.setEnd(range.endContainer, range.endOffset)
+    }
+
+    length += intersection.toString().length
+  }
+
+  return length
+}
+
+function findOffsetsByText(container, text) {
+  if (!container || !text) return null
+  const content = container.textContent || ''
+  const index = content.indexOf(text)
+  if (index === -1) return null
+  return { start: index, end: index + text.length }
 }

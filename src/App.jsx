@@ -61,6 +61,14 @@ function hashContent(content) {
   return hash.toString()
 }
 
+function createAnnotationId() {
+  const cryptoObj = globalThis.crypto
+  if (cryptoObj?.randomUUID) {
+    return cryptoObj.randomUUID()
+  }
+  return `a_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 10)}`
+}
+
 function App() {
   const [markdownContent, setMarkdownContent] = useState(SAMPLE_MARKDOWN)
   const [annotations, setAnnotations] = useState([])
@@ -171,7 +179,7 @@ function App() {
   }
 
   const handleAddAnnotation = (annotation) => {
-    setAnnotations([...annotations, { ...annotation, id: crypto.randomUUID() }])
+    setAnnotations([...annotations, { ...annotation, id: createAnnotationId() }])
   }
 
   const handleDeleteAnnotation = (id) => {

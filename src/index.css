@@ -1,2 +1,45 @@
 @import "tailwindcss";
 @plugin "@tailwindcss/typography";
+
+/* Suppress native iOS/mobile selection menu while keeping text selectable */
+.annotation-content {
+  -webkit-touch-callout: none !important;
+  -webkit-user-select: text !important;
+  user-select: text !important;
+}
+
+.annotation-content * {
+  -webkit-touch-callout: none !important;
+}
+
+/* Prevent text selection UI on selection handles */
+.annotation-content::selection {
+  background: rgba(59, 130, 246, 0.3);
+}
+
+.annotation-content *::selection {
+  background: rgba(59, 130, 246, 0.3);
+}
+
+.annotation-mark {
+  background: linear-gradient(transparent 55%, rgba(251, 191, 36, 0.45) 55%);
+  box-decoration-break: clone;
+  -webkit-box-decoration-break: clone;
+  padding: 0.05em 0.16em;
+  border-radius: 0.25em;
+  cursor: pointer;
+  transition: background-color 150ms ease;
+}
+
+.annotation-mark:hover {
+  background: linear-gradient(transparent 50%, rgba(251, 191, 36, 0.6) 50%);
+}
+
+.annotation-mark-active {
+  background: linear-gradient(transparent 55%, rgba(59, 130, 246, 0.4) 55%);
+  box-decoration-break: clone;
+  -webkit-box-decoration-break: clone;
+  padding: 0.05em 0.16em;
+  border-radius: 0.25em;
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.25);
+}

@@ -97,42 +97,55 @@ export default function InputView({ content, onChange, onStartAnnotating, onLoad
 
   return (
     <div className="flex flex-col h-screen">
-      <header className="bg-white border-b border-gray-200 px-6 py-4">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900">Markdown Annotator</h1>
-            <p className="text-sm text-gray-600 mt-1">
+      <header className="bg-white border-b border-gray-200 px-4 sm:px-6 py-4">
+        <div className="flex items-center justify-between gap-4">
+          <div className="min-w-0">
+            <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Markdown Annotator</h1>
+            <p className="text-sm text-gray-600 mt-1 hidden sm:block">
               Paste your Markdown specification to annotate and provide feedback
             </p>
           </div>
 
-          {/* Code entry */}
-          <form onSubmit={handleLoadCode} className="flex items-center gap-2">
-            <div className="relative">
-              <input
-                type="text"
-                value={codeInput}
-                onChange={(e) => {
-                  setCodeInput(e.target.value.toUpperCase())
-                  setCodeInputError('')
-                }}
-                placeholder="Enter code"
-                maxLength={6}
-                className={`w-28 px-3 py-1.5 text-sm font-mono uppercase border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-                  codeInputError ? 'border-red-300' : 'border-gray-300'
-                }`}
-              />
-              {codeInputError && (
-                <p className="absolute top-full left-0 mt-1 text-xs text-red-500">{codeInputError}</p>
-              )}
-            </div>
+          <div className="flex items-center gap-2 flex-shrink-0">
+            {/* Start Annotating - prominent on mobile */}
             <button
-              type="submit"
-              className="px-3 py-1.5 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+              onClick={onStartAnnotating}
+              disabled={!content.trim()}
+              onTouchEnd={(e) => { e.preventDefault(); if (content.trim()) onStartAnnotating(); }}
+              className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:bg-gray-300 disabled:cursor-not-allowed touch-manipulation"
             >
-              Load
+              <span className="hidden sm:inline">Start Annotating</span>
+              <span className="sm:hidden">Annotate</span>
             </button>
-          </form>
+
+            {/* Code entry - hidden on mobile */}
+            <form onSubmit={handleLoadCode} className="hidden sm:flex items-center gap-2">
+              <div className="relative">
+                <input
+                  type="text"
+                  value={codeInput}
+                  onChange={(e) => {
+                    setCodeInput(e.target.value.toUpperCase())
+                    setCodeInputError('')
+                  }}
+                  placeholder="Enter code"
+                  maxLength={6}
+                  className={`w-28 px-3 py-1.5 text-sm font-mono uppercase border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                    codeInputError ? 'border-red-300' : 'border-gray-300'
+                  }`}
+                />
+                {codeInputError && (
+                  <p className="absolute top-full left-0 mt-1 text-xs text-red-500">{codeInputError}</p>
+                )}
+              </div>
+              <button
+                type="submit"
+                className="px-3 py-1.5 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+              >
+                Load
+              </button>
+            </form>
+          </div>
         </div>
       </header>
 
