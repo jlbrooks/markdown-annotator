@@ -1,10 +1,10 @@
 services:
   # Development service with hot-reload
-  markdown-annotator-dev:
+  specmark-dev:
     build:
       context: .
       target: development
-    container_name: markdown-annotator-dev
+    container_name: specmark-dev
     ports:
       - "5173:5173"
     volumes:
@@ -18,23 +18,23 @@ services:
     environment:
       - NODE_ENV=development
     networks:
-      - markdown-annotator-network
+      - specmark-network
     profiles:
       - dev
 
   # Production service with nginx
-  markdown-annotator-prod:
+  specmark-prod:
     build:
       context: .
       target: production
-    container_name: markdown-annotator-prod
+    container_name: specmark-prod
     ports:
       - "8080:80"
     networks:
-      - markdown-annotator-network
+      - specmark-network
     profiles:
       - prod
 
 networks:
-  markdown-annotator-network:
+  specmark-network:
     driver: bridge

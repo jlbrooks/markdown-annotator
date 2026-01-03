@@ -1,4 +1,4 @@
-# Markdown Annotator
+# Specmark
 
 A web application for annotating Markdown specifications with highlights and comments, designed to generate structured feedback for LLM coding agents.
 
@@ -28,7 +28,7 @@ A web application for annotating Markdown specifications with highlights and com
 ## Project Structure
 
 ```
-markdown-annotator/
+specmark/
 ├── src/                    # Frontend React app
 ├── worker/                 # Cloudflare Worker API
 │   ├── src/
