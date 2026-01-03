@@ -1,7 +1,14 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 
-export default function CommentDialog({ selectedText, position, onSave, onCancel }) {
-  const [comment, setComment] = useState('')
+export default function CommentDialog({
+  selectedText,
+  position,
+  onSave,
+  onCancel,
+  initialComment = '',
+  submitLabel = 'Add',
+}) {
+  const [comment, setComment] = useState(() => initialComment)
   const textareaRef = useRef(null)
   const lastSubmitRef = useRef(0)
   const submitButtonRef = useRef(null)
@@ -140,7 +147,7 @@ export default function CommentDialog({ selectedText, position, onSave, onCancel
               disabled={!comment.trim()}
               className="px-5 py-2.5 text-sm font-medium text-white bg-blue-600 rounded-lg active:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed touch-manipulation"
             >
-              Add
+              {submitLabel}
             </button>
           </div>
         </form>

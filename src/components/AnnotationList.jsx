@@ -1,4 +1,9 @@
-export default function AnnotationList({ annotations, onDeleteAnnotation, onClearAnnotations }) {
+export default function AnnotationList({
+  annotations,
+  onDeleteAnnotation,
+  onClearAnnotations,
+  onEditAnnotation,
+}) {
   return (
     <div className="h-full bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden flex flex-col">
       <div className="px-4 py-3 border-b border-gray-100 flex items-center justify-between bg-gray-50">
@@ -20,7 +25,22 @@ export default function AnnotationList({ annotations, onDeleteAnnotation, onClea
         {annotations.map((annotation) => (
           <div
             key={annotation.id}
-            className="bg-gray-50 rounded-lg p-3 group hover:bg-gray-100 transition-colors"
+            className="bg-gray-50 rounded-lg p-3 group hover:bg-gray-100 transition-colors cursor-pointer"
+            role="button"
+            tabIndex={0}
+            onClick={(event) => {
+              if (!onEditAnnotation) return
+              const rect = event.currentTarget.getBoundingClientRect()
+              onEditAnnotation(annotation, rect)
+            }}
+            onKeyDown={(event) => {
+              if (!onEditAnnotation) return
+              if (event.key === 'Enter' || event.key === ' ') {
+                event.preventDefault()
+                const rect = event.currentTarget.getBoundingClientRect()
+                onEditAnnotation(annotation, rect)
+              }
+            }}
           >
             <div className="flex justify-between items-start gap-2">
               <div className="flex-1 min-w-0">
@@ -30,7 +50,10 @@ export default function AnnotationList({ annotations, onDeleteAnnotation, onClea
                 <p className="text-sm text-gray-700">{annotation.comment}</p>
               </div>
               <button
-                onClick={() => onDeleteAnnotation(annotation.id)}
+                onClick={(event) => {
+                  event.stopPropagation()
+                  onDeleteAnnotation(annotation.id)
+                }}
                 className="opacity-0 group-hover:opacity-100 text-gray-400 hover:text-red-500 transition-opacity p-1"
                 title="Delete"
               >

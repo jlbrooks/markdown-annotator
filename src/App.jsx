@@ -292,6 +292,11 @@ function App() {
           content={markdownContent}
           annotations={annotations}
           onAddAnnotation={handleAddAnnotation}
+          onUpdateAnnotation={(id, updates) => {
+            setAnnotations((prev) => prev.map((annotation) => (
+              annotation.id === id ? { ...annotation, ...updates } : annotation
+            )))
+          }}
           onDeleteAnnotation={handleDeleteAnnotation}
           onClearAnnotations={handleClearAnnotations}
           onBackToEdit={handleBackToEdit}

@@ -7,6 +7,7 @@ export default function AnnotationView({
   content,
   annotations,
   onAddAnnotation,
+  onUpdateAnnotation,
   onDeleteAnnotation,
   onClearAnnotations,
   onBackToEdit,
@@ -18,6 +19,8 @@ export default function AnnotationView({
   const [copySuccess, setCopySuccess] = useState(false)
   const [copyError, setCopyError] = useState(false)
   const [copyFallbackText, setCopyFallbackText] = useState(null)
+  const [editingAnnotationId, setEditingAnnotationId] = useState(null)
+  const [dialogKey, setDialogKey] = useState(0)
   const [showAnnotations, setShowAnnotations] = useState(() => {
     if (typeof window === 'undefined') return true
     return window.matchMedia('(min-width: 768px)').matches
@@ -54,6 +57,40 @@ export default function AnnotationView({
     applyAnnotationHighlights(container, ranges)
   }, [annotations, content])
 
+  useEffect(() => {
+    const container = contentRef.current
+    if (!container) return undefined
+
+    const handleMarkClick = (event) => {
+      const mark = event.target.closest('mark[data-annotation], mark[data-annotations]')
+      if (!mark || !container.contains(mark)) return
+
+      const annotationId = mark.getAttribute('data-annotation')
+        || mark.getAttribute('data-annotations')?.split(',')[0]
+      if (!annotationId) return
+
+      const annotation = annotations.find((item) => item.id === annotationId)
+      if (!annotation) return
+
+      event.preventDefault()
+      event.stopPropagation()
+
+      const rect = mark.getBoundingClientRect()
+      setEditingAnnotationId(annotation.id)
+      setSelectedText(annotation.selectedText)
+      setSelectionPosition({
+        x: rect.left + rect.width / 2,
+        y: rect.top,
+      })
+      setShowTooltip(false)
+      setDialogKey(Date.now())
+      setShowCommentDialog(true)
+    }
+
+    container.addEventListener('click', handleMarkClick)
+    return () => container.removeEventListener('click', handleMarkClick)
+  }, [annotations])
+
   const clearHighlight = useCallback(() => {
     if (highlightRefs.current.length === 0) return
 
@@ -88,6 +125,8 @@ export default function AnnotationView({
     selectionRangeRef.current = null
 
     setShowTooltip(false)
+    setEditingAnnotationId(null)
+    setDialogKey(Date.now())
     setShowCommentDialog(true)
 
     // Reset the flag after a tick
@@ -140,6 +179,16 @@ export default function AnnotationView({
 
   const handleAddComment = (comment) => {
     if (selectedText && comment.trim()) {
+      if (editingAnnotationId) {
+        onUpdateAnnotation(editingAnnotationId, { comment: comment.trim() })
+        clearHighlight()
+        setShowCommentDialog(false)
+        setSelectedText('')
+        setSelectionPosition(null)
+        setEditingAnnotationId(null)
+        return
+      }
+
       onAddAnnotation({
         selectedText,
         comment: comment.trim(),
@@ -161,6 +210,19 @@ export default function AnnotationView({
     setSelectedText('')
     selectionOffsetsRef.current = null
     setSelectionPosition(null)
+    setEditingAnnotationId(null)
+  }
+
+  const handleEditFromList = (annotation, rect) => {
+    setEditingAnnotationId(annotation.id)
+    setSelectedText(annotation.selectedText)
+    setSelectionPosition({
+      x: rect?.left + rect?.width / 2 || window.innerWidth / 2,
+      y: rect?.top || window.innerHeight / 2,
+    })
+    setShowTooltip(false)
+    setDialogKey(Date.now())
+    setShowCommentDialog(true)
   }
 
   const handleCopyFeedback = async () => {
@@ -274,6 +336,7 @@ export default function AnnotationView({
             annotations={annotations}
             onDeleteAnnotation={onDeleteAnnotation}
             onClearAnnotations={onClearAnnotations}
+            onEditAnnotation={handleEditFromList}
           />
         </div>
       )}
@@ -299,10 +362,13 @@ export default function AnnotationView({
       {/* Floating comment dialog */}
       {showCommentDialog && (
         <CommentDialog
+          key={dialogKey}
           selectedText={selectedText}
           position={selectionPosition}
           onSave={handleAddComment}
           onCancel={handleCancelComment}
+          initialComment={annotations.find((item) => item.id === editingAnnotationId)?.comment || ''}
+          submitLabel={editingAnnotationId ? 'Save' : 'Add'}
         />
       )}
 
