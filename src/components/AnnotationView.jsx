@@ -289,7 +289,7 @@ export default function AnnotationView({
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Floating toolbar */}
-      <div className="fixed top-4 left-1/2 -translate-x-1/2 z-40 bg-white rounded-full shadow-lg border border-gray-200 px-2 py-1.5 flex items-center gap-1">
+      <div className="fixed top-4 left-1/2 -translate-x-1/2 z-40 bg-white rounded-full shadow-lg border border-gray-200 px-2 py-1.5 flex flex-wrap items-center justify-center gap-1 max-w-[calc(100vw-2rem)]">
         <button
           onClick={onBackToEdit}
           className="px-3 py-1.5 text-sm font-medium text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-full transition-colors"

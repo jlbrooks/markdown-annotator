@@ -1,11 +1,20 @@
 @import "tailwindcss";
 @plugin "@tailwindcss/typography";
 
+html,
+body,
+#root {
+  width: 100%;
+  max-width: 100%;
+  overflow-x: hidden;
+}
+
 /* Suppress native iOS/mobile selection menu while keeping text selectable */
 .annotation-content {
   -webkit-touch-callout: none !important;
   -webkit-user-select: text !important;
   user-select: text !important;
+  overflow-x: hidden;
 }
 
 .annotation-content * {
@@ -19,6 +28,11 @@
 
 .annotation-content *::selection {
   background: rgba(59, 130, 246, 0.3);
+}
+
+.annotation-content pre {
+  max-width: 100%;
+  overflow-x: auto;
 }
 
 .annotation-mark {
