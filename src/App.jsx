@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import InputView from './components/InputView'
 import AnnotationView from './components/AnnotationView'
+import { API_URL } from './config'
 
 const SAMPLE_MARKDOWN = `# Project Specification
 
@@ -64,12 +65,54 @@ function App() {
   const [markdownContent, setMarkdownContent] = useState(SAMPLE_MARKDOWN)
   const [annotations, setAnnotations] = useState([])
   const [currentView, setCurrentView] = useState('input') // 'input' or 'annotate'
+  const [shareCode, setShareCode] = useState(null) // Track if viewing shared content
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState(null)
+
+  // Get the storage key - use share code if available, otherwise content hash
+  const getStorageKey = (content, code) => {
+    if (code) {
+      return `annotations_share_${code}`
+    }
+    return `annotations_${hashContent(content)}`
+  }
+
+  // Fetch shared content by code
+  const fetchSharedContent = async (code) => {
+    setLoading(true)
+    setError(null)
+    try {
+      const response = await fetch(`${API_URL}/api/share/${code}`)
+      const data = await response.json()
+
+      if (!response.ok) {
+        throw new Error(data.message || 'Failed to load shared content')
+      }
+
+      setMarkdownContent(data.markdown)
+      setShareCode(code.toUpperCase())
+      setCurrentView('annotate')
+    } catch (err) {
+      setError(err.message)
+      setShareCode(null)
+    } finally {
+      setLoading(false)
+    }
+  }
 
   // Load markdown from URL query parameter on mount
   useEffect(() => {
     const params = new URLSearchParams(window.location.search)
-    const urlMarkdown = params.get('markdown') || params.get('md')
 
+    // ?c= takes precedence (share code)
+    const code = params.get('c')
+    if (code) {
+      fetchSharedContent(code)
+      return
+    }
+
+    // Fallback to legacy base64/URL encoded markdown
+    const urlMarkdown = params.get('markdown') || params.get('md')
     if (urlMarkdown) {
       try {
         // Try to decode as base64 first
@@ -82,33 +125,32 @@ function App() {
     }
   }, [])
 
-  // Load annotations from localStorage when markdown content changes
+  // Load annotations from localStorage when markdown content or share code changes
   useEffect(() => {
     if (markdownContent.trim()) {
-      const contentHash = hashContent(markdownContent)
-      const storageKey = `annotations_${contentHash}`
+      const storageKey = getStorageKey(markdownContent, shareCode)
       const stored = localStorage.getItem(storageKey)
-      
+
       if (stored) {
         try {
           setAnnotations(JSON.parse(stored))
         } catch (e) {
           console.error('Failed to parse stored annotations:', e)
+          setAnnotations([])
         }
       } else {
         setAnnotations([])
       }
     }
-  }, [markdownContent])
+  }, [markdownContent, shareCode])
 
   // Save annotations to localStorage whenever they change
   useEffect(() => {
-    if (markdownContent.trim() && annotations.length >= 0) {
-      const contentHash = hashContent(markdownContent)
-      const storageKey = `annotations_${contentHash}`
+    if (markdownContent.trim()) {
+      const storageKey = getStorageKey(markdownContent, shareCode)
       localStorage.setItem(storageKey, JSON.stringify(annotations))
     }
-  }, [annotations, markdownContent])
+  }, [annotations, markdownContent, shareCode])
 
   const handleStartAnnotating = () => {
     if (markdownContent.trim()) {
@@ -118,6 +160,14 @@ function App() {
 
   const handleBackToEdit = () => {
     setCurrentView('input')
+    // Clear share code when going back to edit (user is now working with local content)
+    if (shareCode) {
+      setShareCode(null)
+      // Update URL to remove the code param
+      const url = new URL(window.location.href)
+      url.searchParams.delete('c')
+      window.history.replaceState({}, '', url)
+    }
   }
 
   const handleAddAnnotation = (annotation) => {
@@ -132,11 +182,54 @@ function App() {
     if (window.confirm('Are you sure you want to clear all annotations? This cannot be undone.')) {
       setAnnotations([])
       if (markdownContent.trim()) {
-        const contentHash = hashContent(markdownContent)
-        const storageKey = `annotations_${contentHash}`
+        const storageKey = getStorageKey(markdownContent, shareCode)
         localStorage.removeItem(storageKey)
       }
     }
+  }
+
+  const handleLoadShareCode = (code) => {
+    fetchSharedContent(code)
+    // Update URL to reflect the share code
+    const url = new URL(window.location.href)
+    url.searchParams.set('c', code.toUpperCase())
+    window.history.replaceState({}, '', url)
+  }
+
+  // Loading state
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading shared document...</p>
+        </div>
+      </div>
+    )
+  }
+
+  // Error state (for share code errors)
+  if (error && !markdownContent) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center max-w-md mx-auto p-6">
+          <div className="text-red-500 text-5xl mb-4">!</div>
+          <h1 className="text-xl font-semibold text-gray-900 mb-2">Could not load shared document</h1>
+          <p className="text-gray-600 mb-6">{error}</p>
+          <button
+            onClick={() => {
+              setError(null)
+              const url = new URL(window.location.href)
+              url.searchParams.delete('c')
+              window.history.replaceState({}, '', url)
+            }}
+            className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700"
+          >
+            Start Fresh
+          </button>
+        </div>
+      </div>
+    )
   }
 
   return (
@@ -146,6 +239,8 @@ function App() {
           content={markdownContent}
           onChange={setMarkdownContent}
           onStartAnnotating={handleStartAnnotating}
+          onLoadShareCode={handleLoadShareCode}
+          error={error}
         />
       ) : (
         <AnnotationView

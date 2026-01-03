@@ -1,0 +1,19 @@
+name = "markdown-annotator-api"
+main = "src/index.ts"
+compatibility_date = "2024-12-01"
+
+# KV Namespaces
+# For local dev, wrangler uses a local emulator
+# For production, replace with actual IDs after running:
+#   npx wrangler kv:namespace create SHARES
+#   npx wrangler kv:namespace create SHARES --preview
+[[kv_namespaces]]
+binding = "SHARES"
+id = "local-shares-dev"
+
+[vars]
+FRONTEND_URL = "http://localhost:5173"
+
+# Production environment
+[env.production]
+vars = { FRONTEND_URL = "<YOUR_PRODUCTION_FRONTEND_URL>" }
