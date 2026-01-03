@@ -3,22 +3,37 @@ export default function AnnotationList({
   onDeleteAnnotation,
   onClearAnnotations,
   onEditAnnotation,
+  onClose,
+  className = '',
 }) {
   return (
-    <div className="h-full bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden flex flex-col">
+    <div className={`h-full bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden flex flex-col ${className}`}>
       <div className="px-4 py-3 border-b border-gray-100 flex items-center justify-between bg-gray-50">
         <h2 className="text-sm font-semibold text-gray-700">
           Feedback ({annotations.length})
         </h2>
-        {annotations.length > 0 && (
-          <button
-            onClick={onClearAnnotations}
-            className="text-xs text-red-500 hover:text-red-700 font-medium"
-            title="Clear all"
-          >
-            Clear
-          </button>
-        )}
+        <div className="flex items-center gap-2">
+          {annotations.length > 0 && (
+            <button
+              onClick={onClearAnnotations}
+              className="text-xs text-red-500 hover:text-red-700 font-medium"
+              title="Clear all"
+            >
+              Clear
+            </button>
+          )}
+          {onClose && (
+            <button
+              onClick={onClose}
+              className="text-gray-400 hover:text-gray-600"
+              aria-label="Close"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          )}
+        </div>
       </div>
 
       <div className="flex-1 overflow-auto p-3 space-y-2">

@@ -331,13 +331,33 @@ export default function AnnotationView({
 
       {/* Floating annotations panel */}
       {showAnnotations && annotations.length > 0 && (
-        <div className="fixed right-4 top-20 bottom-4 w-80 z-30">
+        <div className="hidden sm:block fixed right-4 top-20 bottom-4 w-80 z-30">
           <AnnotationList
             annotations={annotations}
             onDeleteAnnotation={onDeleteAnnotation}
             onClearAnnotations={onClearAnnotations}
             onEditAnnotation={handleEditFromList}
           />
+        </div>
+      )}
+
+      {showAnnotations && annotations.length > 0 && (
+        <div className="sm:hidden fixed inset-0 z-50">
+          <div
+            className="absolute inset-0 bg-black/40"
+            onClick={() => setShowAnnotations(false)}
+            aria-hidden="true"
+          />
+          <div className="absolute bottom-0 left-0 right-0 h-[70vh] px-3 pb-3">
+            <AnnotationList
+              annotations={annotations}
+              onDeleteAnnotation={onDeleteAnnotation}
+              onClearAnnotations={onClearAnnotations}
+              onEditAnnotation={handleEditFromList}
+              onClose={() => setShowAnnotations(false)}
+              className="rounded-t-2xl"
+            />
+          </div>
         </div>
       )}
 
