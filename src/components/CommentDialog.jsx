@@ -7,9 +7,11 @@ export default function CommentDialog({
   onCancel,
   initialComment = '',
   submitLabel = 'Add',
+  returnFocusTo,
 }) {
   const [comment, setComment] = useState(() => initialComment)
   const textareaRef = useRef(null)
+  const dialogRef = useRef(null)
   const lastSubmitRef = useRef(0)
   const submitButtonRef = useRef(null)
   const submitRef = useRef(null)
@@ -17,6 +19,15 @@ export default function CommentDialog({
   useEffect(() => {
     textareaRef.current?.focus()
   }, [])
+
+  useEffect(() => {
+    const returnTarget = returnFocusTo
+    return () => {
+      if (returnTarget && typeof returnTarget.focus === 'function') {
+        returnTarget.focus()
+      }
+    }
+  }, [returnFocusTo])
 
   useEffect(() => {
     const handleEscape = (e) => {
@@ -82,6 +93,32 @@ export default function CommentDialog({
     }
   }
 
+  const handleDialogKeyDown = (event) => {
+    if (event.key !== 'Tab') return
+    const container = dialogRef.current
+    if (!container) return
+
+    const focusable = Array.from(container.querySelectorAll(
+      'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+    )).filter((element) => !element.hasAttribute('disabled'))
+
+    if (focusable.length === 0) return
+
+    const first = focusable[0]
+    const last = focusable[focusable.length - 1]
+    const active = document.activeElement
+
+    if (event.shiftKey) {
+      if (active === first || !container.contains(active)) {
+        event.preventDefault()
+        last.focus()
+      }
+    } else if (active === last) {
+      event.preventDefault()
+      first.focus()
+    }
+  }
+
   // Calculate position - prefer above selection to avoid iOS menu
   const style = {}
   if (position) {
@@ -113,8 +150,10 @@ export default function CommentDialog({
       <div
         role="dialog"
         aria-modal="true"
+        ref={dialogRef}
         style={style}
         className="fixed z-50 w-80 bg-white rounded-lg shadow-2xl border border-gray-200 overflow-hidden"
+        onKeyDown={handleDialogKeyDown}
       >
         <div className="bg-blue-50 border-b border-blue-100 px-3 py-2">
           <p className="text-xs text-blue-800 truncate" title={selectedText}>

@@ -12,6 +12,17 @@ A web application for annotating Markdown specifications with highlights and com
 - **Export**: Copy all feedback as formatted Markdown to clipboard
 - **Persistent Annotations**: Annotations saved to localStorage, keyed by content or share code
 
+## Analytics
+
+Specmark uses **Plausible Analytics** for anonymous, privacy-friendly usage tracking. The script is loaded in `index.html`, and the app records:
+
+- Page views (default Plausible behavior)
+- `Share Create` when a share code is successfully created
+- `Share Load` when a share code is successfully retrieved
+- `Copy All` when feedback is copied to the clipboard
+
+No PII or document content is sent with these events.
+
 ## Tech Stack
 
 ### Frontend

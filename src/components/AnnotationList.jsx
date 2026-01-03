@@ -3,6 +3,8 @@ export default function AnnotationList({
   onDeleteAnnotation,
   onClearAnnotations,
   onEditAnnotation,
+  exportSettings,
+  onExportSettingsChange,
   onClose,
   className = '',
   onHeaderTouchStart,
@@ -51,7 +53,41 @@ export default function AnnotationList({
         </div>
       </div>
 
-      <div className="flex-1 overflow-auto p-3 space-y-2">
+      <div className="flex-1 overflow-auto p-3 space-y-3">
+        {onExportSettingsChange && exportSettings && (
+          <details className="rounded-lg border border-gray-200 bg-white px-3 py-2">
+            <summary className="cursor-pointer text-xs font-semibold text-gray-600">
+              Export settings
+            </summary>
+            <div className="mt-3 space-y-3">
+              <label className="block text-xs font-medium text-gray-600">
+                Header / prefix
+                <textarea
+                  rows={3}
+                  value={exportSettings.header}
+                  onChange={(event) => onExportSettingsChange({
+                    ...exportSettings,
+                    header: event.target.value,
+                  })}
+                  className="mt-1 w-full rounded-md border border-gray-200 bg-gray-50 px-2 py-1 text-xs font-mono text-gray-700 focus:border-blue-400 focus:ring-2 focus:ring-blue-200"
+                  placeholder="Add a header or context for your feedback"
+                />
+              </label>
+              <label className="flex items-center gap-2 text-xs text-gray-600">
+                <input
+                  type="checkbox"
+                  checked={exportSettings.includeLineNumbers}
+                  onChange={(event) => onExportSettingsChange({
+                    ...exportSettings,
+                    includeLineNumbers: event.target.checked,
+                  })}
+                  className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                />
+                Include line numbers in quoted selections
+              </label>
+            </div>
+          </details>
+        )}
         {annotations.map((annotation) => (
           <div
             key={annotation.id}
@@ -61,14 +97,14 @@ export default function AnnotationList({
             onClick={(event) => {
               if (!onEditAnnotation) return
               const rect = event.currentTarget.getBoundingClientRect()
-              onEditAnnotation(annotation, rect)
+              onEditAnnotation(annotation, rect, event.currentTarget)
             }}
             onKeyDown={(event) => {
               if (!onEditAnnotation) return
               if (event.key === 'Enter' || event.key === ' ') {
                 event.preventDefault()
                 const rect = event.currentTarget.getBoundingClientRect()
-                onEditAnnotation(annotation, rect)
+                onEditAnnotation(annotation, rect, event.currentTarget)
               }
             }}
           >

@@ -2,6 +2,29 @@ import { useState, useRef, useCallback, useEffect } from 'react'
 import Markdown from 'react-markdown'
 import CommentDialog from './CommentDialog'
 import AnnotationList from './AnnotationList'
+import { trackEvent } from '../utils/analytics'
+
+const FEEDBACK_SETTINGS_KEY = 'markdown_annotator_feedback_settings_v1'
+const DEFAULT_FEEDBACK_SETTINGS = {
+  header: '## Feedback\n\nGenerated with Specmark',
+  includeLineNumbers: false,
+}
+
+function readFeedbackSettings() {
+  if (typeof window === 'undefined') return DEFAULT_FEEDBACK_SETTINGS
+  try {
+    const stored = localStorage.getItem(FEEDBACK_SETTINGS_KEY)
+    if (!stored) return DEFAULT_FEEDBACK_SETTINGS
+    const parsed = JSON.parse(stored)
+    return {
+      header: typeof parsed?.header === 'string' ? parsed.header : DEFAULT_FEEDBACK_SETTINGS.header,
+      includeLineNumbers: Boolean(parsed?.includeLineNumbers),
+    }
+  } catch (err) {
+    console.warn('Failed to read feedback settings:', err)
+    return DEFAULT_FEEDBACK_SETTINGS
+  }
+}
 
 export default function AnnotationView({
   content,
@@ -27,6 +50,8 @@ export default function AnnotationView({
     if (typeof window === 'undefined') return true
     return window.matchMedia('(min-width: 768px)').matches
   })
+  const [exportSettings, setExportSettings] = useState(() => readFeedbackSettings())
+  const [returnFocusElement, setReturnFocusElement] = useState(null)
   const highlightRefs = useRef([])
   const contentRef = useRef(null)
   const selectionRangeRef = useRef(null)
@@ -38,6 +63,15 @@ export default function AnnotationView({
 
   const isMobile = typeof window !== 'undefined'
     && window.matchMedia('(max-width: 640px)').matches
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    try {
+      localStorage.setItem(FEEDBACK_SETTINGS_KEY, JSON.stringify(exportSettings))
+    } catch (err) {
+      console.warn('Failed to save feedback settings:', err)
+    }
+  }, [exportSettings])
 
   // Highlight existing annotations in the content
   useEffect(() => {
@@ -84,6 +118,7 @@ export default function AnnotationView({
       event.stopPropagation()
 
       const rect = mark.getBoundingClientRect()
+      setReturnFocusElement(contentRef.current)
       setEditingAnnotationId(annotation.id)
       setSelectedText(annotation.selectedText)
       setSelectionPosition({
@@ -113,10 +148,11 @@ export default function AnnotationView({
     highlightRefs.current = []
   }, [])
 
-  const handleTooltipClick = useCallback(() => {
+  const handleTooltipClick = useCallback((event) => {
     if (openingDialogRef.current || showCommentDialog) return
     // Mark that we're opening the dialog (prevents selectionchange from clearing state)
     openingDialogRef.current = true
+    setReturnFocusElement(event?.currentTarget || contentRef.current)
 
     // Create highlight from stored range
     if (selectionRangeRef.current && contentRef.current) {
@@ -145,7 +181,7 @@ export default function AnnotationView({
   const handleTooltipPress = useCallback((event) => {
     event.preventDefault()
     event.stopPropagation()
-    handleTooltipClick()
+    handleTooltipClick(event)
   }, [handleTooltipClick])
 
   // Listen for selection changes to show tooltip
@@ -228,7 +264,8 @@ export default function AnnotationView({
     setEditingAnnotationId(null)
   }
 
-  const handleEditFromList = (annotation, rect) => {
+  const handleEditFromList = (annotation, rect, triggerElement) => {
+    setReturnFocusElement(triggerElement || contentRef.current)
     setEditingAnnotationId(annotation.id)
     setSelectedText(annotation.selectedText)
     setSelectionPosition({
@@ -279,7 +316,12 @@ export default function AnnotationView({
   const handleCopyFeedback = async () => {
     if (annotations.length === 0) return
 
-    const feedback = generateFeedbackText(annotations)
+    const feedback = generateFeedbackText(annotations, {
+      header: exportSettings.header,
+      includeLineNumbers: exportSettings.includeLineNumbers,
+      sourceText: contentRef.current?.textContent || '',
+    })
+    trackEvent('Copy All', { annotations: annotations.length })
 
     try {
       await navigator.clipboard.writeText(feedback)
@@ -377,6 +419,7 @@ export default function AnnotationView({
       <div className="max-w-3xl mx-auto px-6 py-20">
         <div
           ref={contentRef}
+          tabIndex={-1}
           className="annotation-content bg-white rounded-xl shadow-sm border border-gray-200 p-8 md:p-12 prose prose-slate max-w-none"
           onContextMenu={(e) => e.preventDefault()}
         >
@@ -392,6 +435,8 @@ export default function AnnotationView({
             onDeleteAnnotation={onDeleteAnnotation}
             onClearAnnotations={onClearAnnotations}
             onEditAnnotation={handleEditFromList}
+            exportSettings={exportSettings}
+            onExportSettingsChange={setExportSettings}
           />
         </div>
       )}
@@ -429,6 +474,8 @@ export default function AnnotationView({
               onDeleteAnnotation={onDeleteAnnotation}
               onClearAnnotations={onClearAnnotations}
               onEditAnnotation={handleEditFromList}
+              exportSettings={exportSettings}
+              onExportSettingsChange={setExportSettings}
               onClose={() => {
                 setShowAnnotations(false)
                 resetSheet()
@@ -444,7 +491,7 @@ export default function AnnotationView({
       {/* Floating tooltip button - positioned above selection */}
       {showTooltip && selectionPosition && (
         <button
-          onClick={handleTooltipClick}
+          onClick={(event) => handleTooltipClick(event)}
           onPointerDown={handleTooltipPress}
           onTouchStart={handleTooltipPress}
           onMouseDown={handleTooltipPress}
@@ -476,6 +523,7 @@ export default function AnnotationView({
           onCancel={handleCancelComment}
           initialComment={annotations.find((item) => item.id === editingAnnotationId)?.comment || ''}
           submitLabel={editingAnnotationId ? 'Save' : 'Add'}
+          returnFocusTo={returnFocusElement}
         />
       )}
 
@@ -509,18 +557,90 @@ export default function AnnotationView({
   )
 }
 
-function generateFeedbackText(annotations) {
-  let feedback = '## Feedback\n\n'
+function generateFeedbackText(annotations, { header, includeLineNumbers, sourceText } = {}) {
+  const normalizedHeader = typeof header === 'string' ? header.trim() : ''
+  const textSource = typeof sourceText === 'string' ? sourceText : ''
+  const lineStarts = includeLineNumbers && textSource ? getLineStarts(textSource) : []
+  const lastIndexByText = new Map()
+
+  let feedback = ''
+  if (normalizedHeader) {
+    feedback += `${normalizedHeader}\n\n`
+  }
 
   annotations.forEach((annotation, index) => {
-    feedback += `> ${annotation.selectedText}\n\n`
+    const lineInfo = includeLineNumbers
+      ? getLineInfo(annotation, textSource, lineStarts, lastIndexByText)
+      : null
+    const heading = lineInfo
+      ? `### ${index + 1}. ${lineInfo}`
+      : `### ${index + 1}.`
+
+    feedback += `${heading}\n\n`
+    feedback += `${formatQuotedText(annotation.selectedText)}\n\n`
     feedback += `${annotation.comment}\n\n`
-    if (index < annotations.length - 1) {
-      feedback += '---\n\n'
-    }
   })
 
-  return feedback
+  return feedback.trim() + '\n'
+}
+
+function getLineStarts(text) {
+  const starts = [0]
+  for (let i = 0; i < text.length; i += 1) {
+    if (text[i] === '\n') {
+      starts.push(i + 1)
+    }
+  }
+  return starts
+}
+
+function getLineInfo(annotation, textSource, lineStarts, lastIndexByText) {
+  if (!textSource) return null
+
+  let start = annotation?.range?.start
+  let end = annotation?.range?.end
+
+  if (!Number.isFinite(start) || !Number.isFinite(end)) {
+    const selectedText = annotation?.selectedText
+    if (!selectedText) return null
+    const fromIndex = lastIndexByText.get(selectedText) ?? 0
+    const foundIndex = textSource.indexOf(selectedText, fromIndex)
+    if (foundIndex === -1) return null
+    start = foundIndex
+    end = foundIndex + selectedText.length
+    lastIndexByText.set(selectedText, end)
+  }
+
+  const startLine = getLineNumber(lineStarts, start)
+  const endLine = getLineNumber(lineStarts, Math.max(start, end - 1))
+
+  if (!startLine || !endLine) return null
+  if (startLine === endLine) return `Line ${startLine}`
+  return `Lines ${startLine}-${endLine}`
+}
+
+function getLineNumber(lineStarts, offset) {
+  let low = 0
+  let high = lineStarts.length - 1
+  let result = 1
+
+  while (low <= high) {
+    const mid = Math.floor((low + high) / 2)
+    const start = lineStarts[mid]
+    if (start <= offset) {
+      result = mid + 1
+      low = mid + 1
+    } else {
+      high = mid - 1
+    }
+  }
+
+  return result
+}
+
+function formatQuotedText(text) {
+  const safeText = typeof text === 'string' ? text : ''
+  return safeText.split('\n').map((line) => `> ${line}`).join('\n')
 }
 
 function wrapRangeInMarks(container, range, className, attributes) {

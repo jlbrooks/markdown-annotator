@@ -1,16 +1,34 @@
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { API_URL } from '../config'
 import { encodeMarkdownForUrl } from '../utils/markdownShare'
+import { parseShareErrorResponse, parseShareNetworkError } from '../utils/shareErrors'
+import { trackEvent } from '../utils/analytics'
 
 export default function InputView({ content, onChange, onStartAnnotating, onLoadShareCode, error }) {
   const [shareSuccess, setShareSuccess] = useState(false)
-  const [shareError, setShareError] = useState(false)
+  const [shareErrorMessage, setShareErrorMessage] = useState('')
   const [shareUrlError, setShareUrlError] = useState(false)
   const [shareUrlFallback, setShareUrlFallback] = useState('')
   const [codeInput, setCodeInput] = useState('')
   const [codeInputError, setCodeInputError] = useState('')
   const [showShareResult, setShowShareResult] = useState(null)
   const [isCreatingShare, setIsCreatingShare] = useState(false)
+  const [showHelp, setShowHelp] = useState(() => {
+    if (typeof window === 'undefined') return true
+    return localStorage.getItem('specmark_help_collapsed_v1') !== 'true'
+  })
+  const shareErrorTimeoutRef = useRef(null)
+
+  const setShareErrorWithTimeout = (message) => {
+    setShareErrorMessage(message)
+    if (shareErrorTimeoutRef.current) {
+      window.clearTimeout(shareErrorTimeoutRef.current)
+    }
+    shareErrorTimeoutRef.current = window.setTimeout(() => {
+      setShareErrorMessage('')
+      shareErrorTimeoutRef.current = null
+    }, 4000)
+  }
 
   const handleShareURL = async () => {
     if (!content.trim()) return
@@ -22,7 +40,7 @@ export default function InputView({ content, onChange, onStartAnnotating, onLoad
     try {
       await navigator.clipboard.writeText(url)
       setShareSuccess(true)
-      setShareError(false)
+      setShareErrorMessage('')
       setShareUrlError(false)
       setShareUrlFallback('')
       setTimeout(() => setShareSuccess(false), 2000)
@@ -39,6 +57,7 @@ export default function InputView({ content, onChange, onStartAnnotating, onLoad
     if (!content.trim()) return
 
     setIsCreatingShare(true)
+    setShowShareResult(null)
     try {
       const response = await fetch(`${API_URL}/api/share`, {
         method: 'POST',
@@ -48,17 +67,25 @@ export default function InputView({ content, onChange, onStartAnnotating, onLoad
         body: content,
       })
 
-      const data = await response.json()
+      let data = null
+      try {
+        data = await response.json()
+      } catch {
+        data = null
+      }
 
       if (!response.ok) {
-        throw new Error(data.message || 'Failed to create share')
+        const errorInfo = parseShareErrorResponse({ data, status: response.status, context: 'create' })
+        throw Object.assign(new Error(errorInfo.message), { code: errorInfo.code })
       }
 
       setShowShareResult(data)
+      setShareErrorMessage('')
+      trackEvent('Share Create')
     } catch (err) {
       console.error('Failed to create share:', err)
-      setShareError(true)
-      setTimeout(() => setShareError(false), 3000)
+      const message = err?.code ? err.message : parseShareNetworkError('create').message
+      setShareErrorWithTimeout(message)
     } finally {
       setIsCreatingShare(false)
     }
@@ -113,6 +140,12 @@ export default function InputView({ content, onChange, onStartAnnotating, onLoad
           </div>
 
           <div className="flex items-center gap-2 flex-shrink-0">
+            <a
+              href="/cli/"
+              className="hidden sm:inline-flex px-3 py-1.5 text-sm font-medium text-gray-600 border border-gray-200 rounded-md hover:text-gray-900 hover:border-gray-300"
+            >
+              CLI Setup
+            </a>
             {/* Start Annotating - prominent on mobile */}
             <button
               onClick={onStartAnnotating}
@@ -185,7 +218,54 @@ export default function InputView({ content, onChange, onStartAnnotating, onLoad
         </form>
       </div>
 
-      <div className="flex-1 flex flex-col p-6">
+      <div className="flex-1 flex flex-col p-6 gap-4">
+        <div className="bg-white border border-gray-200 rounded-xl px-4 py-3 shadow-sm">
+          <div className="flex items-center justify-between gap-4">
+            <div>
+              <h2 className="text-sm font-semibold text-gray-800">Quick guide</h2>
+              <p className="text-xs text-gray-500">
+                Specmark helps you highlight requirements and turn them into structured feedback.
+              </p>
+            </div>
+            <button
+              onClick={() => {
+                const next = !showHelp
+                setShowHelp(next)
+                localStorage.setItem('specmark_help_collapsed_v1', next ? 'false' : 'true')
+              }}
+              className="text-xs font-medium text-blue-600 hover:text-blue-700"
+            >
+              {showHelp ? 'Hide' : 'Show'}
+            </button>
+          </div>
+          {showHelp && (
+            <div className="mt-3 grid gap-3 text-xs text-gray-600 sm:grid-cols-3">
+              <div className="rounded-lg bg-gray-50 px-3 py-2">
+                <p className="font-semibold text-gray-700">1. Paste Markdown</p>
+                <p>Add your spec or PRD in the editor.</p>
+              </div>
+              <div className="rounded-lg bg-gray-50 px-3 py-2">
+                <p className="font-semibold text-gray-700">2. Annotate</p>
+                <p>Select text to leave specific feedback.</p>
+              </div>
+              <div className="rounded-lg bg-gray-50 px-3 py-2">
+                <p className="font-semibold text-gray-700">3. Copy Feedback</p>
+                <p>Export clean Markdown for your LLM agent.</p>
+              </div>
+              <div className="sm:col-span-3 text-[11px] text-gray-500">
+                Share codes are 6 characters and expire after 7 days.
+              </div>
+            </div>
+          )}
+        </div>
+
+        <div className="flex items-start gap-2 text-[11px] text-gray-500">
+          <span className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-gray-100 text-gray-600">i</span>
+          <p>
+            Shares expire after 7 days. Annotations are saved locally in your browser (localStorage).
+          </p>
+        </div>
+
         <div className="flex-1 flex flex-col">
           <label htmlFor="markdown-input" className="text-sm font-medium text-gray-700 mb-2">
             Markdown Content
@@ -352,9 +432,9 @@ export default function InputView({ content, onChange, onStartAnnotating, onLoad
       )}
 
       {/* Error toast */}
-      {(shareError || error) && (
+      {(shareErrorMessage || error) && (
         <div className="fixed bottom-4 right-4 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg shadow-lg">
-          {error || 'Failed to create share code'}
+          {shareErrorMessage || error}
         </div>
       )}
     </div>
