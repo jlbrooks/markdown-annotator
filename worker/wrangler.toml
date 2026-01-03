@@ -16,4 +16,4 @@ FRONTEND_URL = "http://localhost:5173"
 
 # Production environment
 [env.production]
-vars = { FRONTEND_URL = "<YOUR_PRODUCTION_FRONTEND_URL>" }
+vars = { FRONTEND_URL = "https://specmark.dev" }

@@ -85,7 +85,7 @@ cd worker && npm run dev
 
 ### Loading Shared Content
 
-- **Via URL**: `https://your-domain.com?c=X7KM3P`
+- **Via URL**: `https://specmark.dev?c=X7KM3P`
 - **Via Code Entry**: Enter the 6-character code in the header input field
 
 ### CLI Tool
@@ -98,14 +98,14 @@ Create share links directly from your terminal:
 
 # Output:
 # Share created!
-# URL:  https://your-domain.com?c=X7KM3P
+# URL:  https://specmark.dev?c=X7KM3P
 # Code: X7KM3P
 # Expires: 2025-01-10
 ```
 
-Set the API URL for production:
+For local development:
 ```bash
-export ANNOTATE_API_URL=https://your-worker.your-subdomain.workers.dev
+export ANNOTATE_API_URL=http://localhost:8787
 ./cli/annotate-md document.md
 ```
 
@@ -117,6 +117,16 @@ The original base64 URL encoding is still supported:
 
 ## Production Deployment
 
+Specmark uses **Cloudflare Pages** for static hosting and **Cloudflare Workers** for the API, with path-based routing (`/api/*`) to keep everything on the same domain.
+
+### Architecture
+
+- **Frontend**: `https://specmark.dev` (Cloudflare Pages)
+- **API**: `https://specmark.dev/api/*` (Cloudflare Worker)
+- **Routing**: `public/_routes.json` excludes `/api/*` from Pages, routes to Worker
+
+This same-origin setup eliminates CORS complexity and provides a cleaner user experience.
+
 ### 1. Create Cloudflare Account & KV Namespace
 
 ```bash
@@ -124,33 +134,30 @@ The original base64 URL encoding is still supported:
 cd worker
 npx wrangler login
 
-# Create KV namespace
-npx wrangler kv:namespace create SHARES
+# Create production KV namespace
+npx wrangler kv:namespace create SHARES --env production
 # Note the ID returned, e.g., "abc123..."
 ```
 
 ### 2. Update Worker Configuration
 
-Edit `worker/wrangler.toml`:
+Edit `worker/wrangler.toml` and add the KV namespace ID:
 
 ```toml
-[[kv_namespaces]]
-binding = "SHARES"
-id = "your-kv-namespace-id-here"
-
-[vars]
-FRONTEND_URL = "https://your-frontend-domain.com"
-
 [env.production]
-vars = { FRONTEND_URL = "https://your-frontend-domain.com" }
+kv_namespaces = [
+  { binding = "SHARES", id = "your-kv-namespace-id-here" }
+]
+vars = { FRONTEND_URL = "https://specmark.dev" }
 ```
 
 ### 3. Deploy Worker
 
-**Manual deployment:**
+Deploy the Worker to `specmark.dev/api/*`:
+
 ```bash
 cd worker
-npx wrangler deploy
+npx wrangler deploy --env production --route "specmark.dev/api/*"
 ```
 
 **Via GitHub Actions:**
@@ -160,32 +167,64 @@ npx wrangler deploy
 2. Add the token as a GitHub secret named `CLOUDFLARE_API_TOKEN`
 3. Push to main branch - the worker will auto-deploy
 
-### 4. Configure Frontend
+### 4. Deploy Frontend to Cloudflare Pages
 
-Create a `.env.production` file or set the environment variable in your hosting platform:
+**Option A: GitHub Integration (Recommended)**
 
-```bash
-VITE_API_URL=https://your-worker.your-subdomain.workers.dev
-```
+1. Go to [Cloudflare Pages](https://pages.cloudflare.com)
+2. Connect your GitHub repository
+3. Configure build settings:
+   - **Build command**: `npm run build`
+   - **Build output directory**: `dist`
+   - **Root directory**: `/` (leave empty)
+4. Deploy
 
-### 5. Deploy Frontend
+The `public/_routes.json` file automatically configures routing so `/api/*` requests go to your Worker.
 
-Build and deploy to your preferred static hosting (Vercel, Netlify, Cloudflare Pages, etc.):
+**Option B: Manual Deployment**
 
 ```bash
 npm run build
-# Deploy the `dist/` folder
+npx wrangler pages deploy dist --project-name=specmark
 ```
 
-### 6. Update CLI Tool
+### 5. Configure DNS
 
-For users of the CLI tool, set the production API URL:
+In Cloudflare DNS, set up your domain:
+
+1. Add your domain to Cloudflare (if not already)
+2. Cloudflare Pages will automatically configure the DNS records
+3. Your Worker route (`specmark.dev/api/*`) uses the same domain
+
+### 6. Verify Routing
+
+Test that the setup works:
 
 ```bash
-export ANNOTATE_API_URL=https://your-worker.your-subdomain.workers.dev
+# Frontend (should return HTML)
+curl https://specmark.dev
+
+# API health check (should return JSON)
+curl https://specmark.dev/health
+
+# API endpoint (should work)
+curl -X POST https://specmark.dev/api/share \
+  -H "Content-Type: text/markdown" \
+  -d "# Test"
 ```
 
-Or edit the default in `cli/annotate-md`.
+### Local Development with Production API
+
+To test against production:
+
+```bash
+# Frontend
+VITE_API_URL=https://specmark.dev npm run dev
+
+# CLI
+export ANNOTATE_API_URL=https://specmark.dev
+./cli/annotate-md document.md
+```
 
 ## API Reference
 

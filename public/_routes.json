@@ -1,0 +1,6 @@
+{
+  "version": 1,
+  "description": "Route /api/* requests to Worker, serve everything else from Pages",
+  "exclude": ["/api/*"],
+  "include": ["/*"]
+}
