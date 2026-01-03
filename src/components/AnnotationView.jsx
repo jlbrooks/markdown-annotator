@@ -420,6 +420,8 @@ export default function AnnotationView({
                 resetSheet()
               }}
               className="rounded-t-2xl"
+              onHeaderTouchStart={handleSheetTouchStart}
+              onHeaderTouchMove={handleSheetTouchMove}
             />
           </div>
         </div>

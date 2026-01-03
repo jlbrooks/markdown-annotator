@@ -5,10 +5,17 @@ export default function AnnotationList({
   onEditAnnotation,
   onClose,
   className = '',
+  onHeaderTouchStart,
+  onHeaderTouchMove,
 }) {
   return (
     <div className={`h-full bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden flex flex-col ${className}`}>
-      <div className="px-4 py-3 border-b border-gray-100 flex items-center justify-between bg-gray-50">
+      <div
+        className="px-4 py-3 border-b border-gray-100 flex items-center justify-between bg-gray-50"
+        onTouchStart={onHeaderTouchStart}
+        onTouchMove={onHeaderTouchMove}
+        style={onHeaderTouchStart ? { touchAction: 'none' } : undefined}
+      >
         <h2 className="text-sm font-semibold text-gray-700">
           Feedback ({annotations.length})
         </h2>
