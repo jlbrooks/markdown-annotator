@@ -24,6 +24,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
+import { X } from "lucide-react";
 
 export default function InputView({
   content,
@@ -214,9 +215,23 @@ export default function InputView({
                   maxLength={6}
                   className={cn(
                     "w-28 uppercase font-mono",
+                    codeInput && "pr-8",
                     codeInputError && "border-destructive focus-visible:ring-destructive",
                   )}
                 />
+                {codeInput && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setCodeInput("");
+                      setCodeInputError("");
+                    }}
+                    className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                    aria-label="Clear input"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                )}
                 {codeInputError && (
                   <p className="absolute top-full left-0 mt-1 text-xs text-destructive">
                     {codeInputError}
@@ -234,7 +249,7 @@ export default function InputView({
       {/* Code entry - mobile */}
       <div className="sm:hidden px-4 pb-3">
         <form onSubmit={handleLoadCode} className="flex items-start gap-2">
-          <div className="flex-1">
+          <div className="flex-1 relative">
             <Input
               type="text"
               value={codeInput}
@@ -246,9 +261,23 @@ export default function InputView({
               maxLength={6}
               className={cn(
                 "w-full uppercase font-mono",
+                codeInput && "pr-8",
                 codeInputError && "border-destructive focus-visible:ring-destructive",
               )}
             />
+            {codeInput && (
+              <button
+                type="button"
+                onClick={() => {
+                  setCodeInput("");
+                  setCodeInputError("");
+                }}
+                className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                aria-label="Clear input"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            )}
             {codeInputError && (
               <p className="mt-1 text-xs text-destructive">{codeInputError}</p>
             )}
