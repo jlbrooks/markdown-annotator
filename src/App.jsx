@@ -111,6 +111,7 @@ function App() {
   const [loading, setLoading] = useState(false)
   const [shareLoadError, setShareLoadError] = useState(null)
   const [shareLoadOrigin, setShareLoadOrigin] = useState(null)
+  const [isCliRedirect, setIsCliRedirect] = useState(false)
   const sessionRestoredRef = useRef(false)
 
   const getViewFromUrl = useCallback(() => {
@@ -139,6 +140,14 @@ function App() {
     updateUrlParams({ view }, { replace })
     setCurrentView(view)
   }, [updateUrlParams])
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    if (window.location.pathname.startsWith('/cli')) {
+      window.location.replace('/cli/index.html')
+      setIsCliRedirect(true)
+    }
+  }, [])
 
   // Get the storage key - use share code if available, otherwise content hash
   const getStorageKey = (content, code) => {
@@ -335,6 +344,10 @@ function App() {
     fetchSharedContent(code, { origin: 'manual' })
     // Update URL to reflect the share code
     updateUrlParams({ c: code.toUpperCase() }, { replace: true })
+  }
+
+  if (isCliRedirect) {
+    return null
   }
 
   // Loading state
