@@ -1,5 +1,6 @@
 import { useState, useRef, useCallback, useEffect } from 'react'
 import Markdown from 'react-markdown'
+import remarkGfm from 'remark-gfm'
 import CommentDialog from './CommentDialog'
 import AnnotationList from './AnnotationList'
 import { trackEvent } from '../utils/analytics'
@@ -423,7 +424,18 @@ export default function AnnotationView({
           className="annotation-content bg-white rounded-xl shadow-sm border border-gray-200 p-8 md:p-12 prose prose-slate max-w-none"
           onContextMenu={(e) => e.preventDefault()}
         >
-          <Markdown>{content}</Markdown>
+          <Markdown
+            remarkPlugins={[remarkGfm]}
+            components={{
+              table: ({ ...props }) => (
+                <div className="markdown-table">
+                  <table {...props} />
+                </div>
+              ),
+            }}
+          >
+            {content}
+          </Markdown>
         </div>
       </div>
 

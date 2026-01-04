@@ -35,6 +35,16 @@ body,
   overflow-x: auto;
 }
 
+.annotation-content .markdown-table {
+  max-width: 100%;
+  overflow-x: auto;
+}
+
+.annotation-content .markdown-table table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
 .annotation-mark {
   background: linear-gradient(transparent 55%, rgba(251, 191, 36, 0.45) 55%);
   box-decoration-break: clone;
