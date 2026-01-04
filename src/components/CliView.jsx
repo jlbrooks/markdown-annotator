@@ -27,8 +27,8 @@ export default function CliView() {
                 Download the script and add it to your PATH.
               </p>
             </div>
-            <a
-              href="/cli/annotate-md"
+          <a
+              href="https://raw.githubusercontent.com/jlbrooks/specmark/main/cli/annotate-md"
               className="inline-flex items-center justify-center px-4 py-2 text-sm font-semibold text-white bg-blue-600 rounded-md hover:bg-blue-700"
             >
               Download script
@@ -37,7 +37,7 @@ export default function CliView() {
 
           <pre className="mt-4 bg-gray-900 text-gray-100 text-xs rounded-lg p-4 overflow-x-auto">
             <code>{`mkdir -p ~/.local/bin
-curl -fsSL https://specmark.dev/cli/annotate-md -o ~/.local/bin/annotate-md
+curl -fsSL https://raw.githubusercontent.com/jlbrooks/specmark/main/cli/annotate-md -o ~/.local/bin/annotate-md
 chmod +x ~/.local/bin/annotate-md`}</code>
           </pre>
           <p className="mt-3 text-xs text-gray-500">
