@@ -178,12 +178,20 @@ cd worker
 npx wrangler deploy --env production --route "specmark.dev/api/*"
 ```
 
-**Via GitHub Actions:**
+**Via GitHub Actions (Automated):**
 
 1. Create a Cloudflare API token at https://dash.cloudflare.com/profile/api-tokens
-   - Use the "Edit Cloudflare Workers" template
-2. Add the token as a GitHub secret named `CLOUDFLARE_API_TOKEN`
-3. Push to main branch - the worker will auto-deploy
+   - Use the "Edit Cloudflare Workers" template or create custom token with:
+     - Workers Scripts: Edit
+     - Workers KV Storage: Edit
+     - Cloudflare Pages: Edit
+2. Add GitHub secrets at `https://github.com/YOUR_USERNAME/specmark/settings/secrets/actions`:
+   - `CLOUDFLARE_API_TOKEN` - Your Cloudflare API token
+   - `VITE_UMAMI_SCRIPT_URL` - (Optional) Your Umami analytics script URL
+   - `VITE_UMAMI_WEBSITE_ID` - (Optional) Your Umami website ID
+3. Push to main branch:
+   - Worker changes (`worker/**`) trigger worker deployment
+   - Frontend changes (`src/**`, `public/**`) trigger Pages deployment
 
 ### 4. Deploy Frontend to Cloudflare Pages
 
