@@ -6,6 +6,24 @@ import {
   parseShareNetworkError,
 } from "../utils/shareErrors";
 import { trackEvent } from "../utils/analytics";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { cn } from "@/lib/utils";
 
 export default function InputView({
   content,
@@ -146,38 +164,35 @@ export default function InputView({
   };
 
   return (
-    <div className="flex flex-col h-screen">
-      <header className="bg-white border-b border-gray-200 px-4 sm:px-6 py-4">
+    <div className="flex flex-col min-h-screen bg-muted/30">
+      <header className="bg-background border-b border-border px-4 sm:px-6 py-4">
         <div className="flex items-center justify-between gap-4">
           <div className="min-w-0">
-            <h1 className="text-xl sm:text-2xl font-bold text-gray-900">
+            <h1 className="text-xl sm:text-2xl font-bold text-foreground">
               Specmark Markdown Annotator
             </h1>
-            <p className="text-sm text-gray-600 mt-1 hidden sm:block">
+            <p className="text-sm text-muted-foreground mt-1 hidden sm:block">
               Paste your Markdown specification to annotate and provide feedback
             </p>
           </div>
 
           <div className="flex items-center gap-2 flex-shrink-0">
-            <a
-              href="/cli/"
-              className="hidden sm:inline-flex px-3 py-1.5 text-sm font-medium text-gray-600 border border-gray-200 rounded-md hover:text-gray-900 hover:border-gray-300"
-            >
-              CLI Setup
-            </a>
+            <Button asChild variant="outline" size="sm" className="hidden sm:inline-flex">
+              <a href="/cli/">CLI Setup</a>
+            </Button>
             {/* Start Annotating - prominent on mobile */}
-            <button
+            <Button
               onClick={onStartAnnotating}
               disabled={!content.trim()}
               onTouchEnd={(e) => {
                 e.preventDefault();
                 if (content.trim()) onStartAnnotating();
               }}
-              className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:bg-gray-300 disabled:cursor-not-allowed touch-manipulation"
+              className="touch-manipulation"
             >
               <span className="hidden sm:inline">Start Annotating</span>
               <span className="sm:hidden">Annotate</span>
-            </button>
+            </Button>
 
             {/* Code entry - hidden on mobile */}
             <form
@@ -185,7 +200,7 @@ export default function InputView({
               className="hidden sm:flex items-center gap-2"
             >
               <div className="relative">
-                <input
+                <Input
                   type="text"
                   value={codeInput}
                   onChange={(e) => {
@@ -194,22 +209,20 @@ export default function InputView({
                   }}
                   placeholder="Enter code"
                   maxLength={6}
-                  className={`w-28 px-3 py-1.5 text-sm font-mono uppercase border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-                    codeInputError ? "border-red-300" : "border-gray-300"
-                  }`}
+                  className={cn(
+                    "w-28 uppercase font-mono",
+                    codeInputError && "border-destructive focus-visible:ring-destructive",
+                  )}
                 />
                 {codeInputError && (
-                  <p className="absolute top-full left-0 mt-1 text-xs text-red-500">
+                  <p className="absolute top-full left-0 mt-1 text-xs text-destructive">
                     {codeInputError}
                   </p>
                 )}
               </div>
-              <button
-                type="submit"
-                className="px-3 py-1.5 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-              >
+              <Button type="submit" variant="outline" size="sm">
                 Load
-              </button>
+              </Button>
             </form>
           </div>
         </div>
@@ -219,7 +232,7 @@ export default function InputView({
       <div className="sm:hidden px-4 pb-3">
         <form onSubmit={handleLoadCode} className="flex items-start gap-2">
           <div className="flex-1">
-            <input
+            <Input
               type="text"
               value={codeInput}
               onChange={(e) => {
@@ -228,36 +241,34 @@ export default function InputView({
               }}
               placeholder="Enter share code"
               maxLength={6}
-              className={`w-full px-3 py-2 text-sm font-mono uppercase border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-                codeInputError ? "border-red-300" : "border-gray-300"
-              }`}
+              className={cn(
+                "w-full uppercase font-mono",
+                codeInputError && "border-destructive focus-visible:ring-destructive",
+              )}
             />
             {codeInputError && (
-              <p className="mt-1 text-xs text-red-500">{codeInputError}</p>
+              <p className="mt-1 text-xs text-destructive">{codeInputError}</p>
             )}
           </div>
-          <button
-            type="submit"
-            className="px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-          >
+          <Button type="submit" variant="outline" size="sm">
             Load
-          </button>
+          </Button>
         </form>
       </div>
 
       <div className="flex-1 flex flex-col p-6 gap-4">
-        <div className="bg-white border border-gray-200 rounded-xl px-4 py-3 shadow-sm">
-          <div className="flex items-center justify-between gap-4">
+        <Card>
+          <CardHeader className="flex flex-row items-start justify-between gap-4 space-y-0">
             <div>
-              <h2 className="text-sm font-semibold text-gray-800">
-                Quick guide
-              </h2>
-              <p className="text-xs text-gray-500">
+              <CardTitle className="text-sm">Quick guide</CardTitle>
+              <CardDescription className="text-xs">
                 Specmark helps you highlight requirements and turn them into
                 structured feedback.
-              </p>
+              </CardDescription>
             </div>
-            <button
+            <Button
+              variant="ghost"
+              size="sm"
               onClick={() => {
                 const next = !showHelp;
                 setShowHelp(next);
@@ -266,36 +277,41 @@ export default function InputView({
                   next ? "false" : "true",
                 );
               }}
-              className="text-xs font-medium text-blue-600 hover:text-blue-700"
+              className="h-7 px-2 text-xs"
             >
               {showHelp ? "Hide" : "Show"}
-            </button>
-          </div>
+            </Button>
+          </CardHeader>
           {showHelp && (
-            <div className="mt-3 grid gap-3 text-xs text-gray-600 sm:grid-cols-3">
-              <div className="rounded-lg bg-gray-50 px-3 py-2">
-                <p className="font-semibold text-gray-700">1. Paste Markdown</p>
-                <p>Add your spec or PRD in the editor.</p>
+            <CardContent className="pt-0">
+              <div className="grid gap-3 text-xs text-muted-foreground sm:grid-cols-3">
+                <div className="rounded-lg bg-muted/40 px-3 py-2">
+                  <p className="font-semibold text-foreground">1. Paste Markdown</p>
+                  <p>Add your spec or PRD in the editor.</p>
+                </div>
+                <div className="rounded-lg bg-muted/40 px-3 py-2">
+                  <p className="font-semibold text-foreground">2. Annotate</p>
+                  <p>Select text to leave specific feedback.</p>
+                </div>
+                <div className="rounded-lg bg-muted/40 px-3 py-2">
+                  <p className="font-semibold text-foreground">3. Copy Feedback</p>
+                  <p>Export clean Markdown for your LLM agent.</p>
+                </div>
+                <div className="sm:col-span-3 text-[11px] text-muted-foreground">
+                  Share codes are 6 characters and expire after 7 days.
+                </div>
               </div>
-              <div className="rounded-lg bg-gray-50 px-3 py-2">
-                <p className="font-semibold text-gray-700">2. Annotate</p>
-                <p>Select text to leave specific feedback.</p>
-              </div>
-              <div className="rounded-lg bg-gray-50 px-3 py-2">
-                <p className="font-semibold text-gray-700">3. Copy Feedback</p>
-                <p>Export clean Markdown for your LLM agent.</p>
-              </div>
-              <div className="sm:col-span-3 text-[11px] text-gray-500">
-                Share codes are 6 characters and expire after 7 days.
-              </div>
-            </div>
+            </CardContent>
           )}
-        </div>
+        </Card>
 
-        <div className="flex items-start gap-2 text-[11px] text-gray-500">
-          <span className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-gray-100 text-gray-600">
+        <div className="flex items-start gap-2 text-[11px] text-muted-foreground">
+          <Badge
+            variant="secondary"
+            className="h-5 w-5 justify-center rounded-full px-0 font-semibold"
+          >
             i
-          </span>
+          </Badge>
           <p>
             Shares expire after 7 days. Annotations are saved locally in your
             browser (localStorage).
@@ -305,13 +321,13 @@ export default function InputView({
         <div className="flex-1 flex flex-col">
           <label
             htmlFor="markdown-input"
-            className="text-sm font-medium text-gray-700 mb-2"
+            className="text-sm font-medium text-foreground mb-2"
           >
             Markdown Content
           </label>
-          <textarea
+          <Textarea
             id="markdown-input"
-            className="flex-1 w-full p-4 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 font-mono text-sm resize-none"
+            className="flex-1 w-full p-4 font-mono text-sm resize-none"
             placeholder="Paste your Markdown specification here..."
             value={content}
             onChange={(e) => onChange(e.target.value)}
@@ -319,16 +335,16 @@ export default function InputView({
         </div>
 
         <div className="mt-4 flex gap-3 flex-wrap">
-          <button
+          <Button
+            variant="outline"
             onClick={() => onChange("")}
-            className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
           >
             Clear
-          </button>
-          <button
+          </Button>
+          <Button
+            variant="outline"
             onClick={handleShareURL}
             disabled={!content.trim()}
-            className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
           >
             {shareSuccess ? (
               <>
@@ -365,11 +381,11 @@ export default function InputView({
                 Share URL
               </>
             )}
-          </button>
-          <button
+          </Button>
+          <Button
+            variant="outline"
             onClick={handleGetShareCode}
             disabled={!content.trim() || isCreatingShare}
-            className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
           >
             {isCreatingShare ? (
               <>
@@ -412,78 +428,67 @@ export default function InputView({
                 Get Share Code
               </>
             )}
-          </button>
+          </Button>
           <div className="flex-1" />
-          <button
+          <Button
             onClick={onStartAnnotating}
             disabled={!content.trim()}
-            className="px-6 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:bg-gray-300 disabled:cursor-not-allowed"
           >
             Start Annotating
-          </button>
+          </Button>
         </div>
 
         {shareUrlFallback && (
           <div className="mt-3 w-full">
             <p
-              className={`text-xs ${shareUrlError ? "text-red-500" : "text-gray-500"}`}
+              className={cn(
+                "text-xs",
+                shareUrlError ? "text-destructive" : "text-muted-foreground",
+              )}
             >
               {shareUrlError
                 ? "Clipboard failed — copy the URL below."
                 : "Copy URL:"}
             </p>
-            <input
+            <Input
               type="text"
               readOnly
               value={shareUrlFallback}
               onFocus={(e) => e.target.select()}
-              className="mt-1 w-full px-3 py-2 text-xs font-mono bg-gray-50 border border-gray-200 rounded-md"
+              className="mt-1 w-full font-mono text-xs"
             />
           </div>
         )}
       </div>
 
       {/* Share result modal */}
-      {showShareResult && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl shadow-2xl max-w-md w-full p-6">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-semibold text-gray-900">
-                Share Code Created
-              </h2>
-              <button
-                onClick={() => setShowShareResult(null)}
-                className="text-gray-400 hover:text-gray-600"
-              >
-                <svg
-                  className="w-5 h-5"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M6 18L18 6M6 6l12 12"
-                  />
-                </svg>
-              </button>
-            </div>
+      <Dialog
+        open={Boolean(showShareResult)}
+        onOpenChange={(open) => {
+          if (!open) setShowShareResult(null);
+        }}
+      >
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Share Code Created</DialogTitle>
+          </DialogHeader>
 
+          {showShareResult && (
             <div className="space-y-4">
               {/* Code display */}
               <div>
-                <label className="block text-sm font-medium text-gray-500 mb-1">
+                <label className="block text-sm font-medium text-muted-foreground mb-1">
                   Code
                 </label>
                 <div className="flex items-center gap-2">
-                  <code className="flex-1 text-3xl font-mono font-bold text-blue-600 tracking-widest">
+                  <code className="flex-1 text-3xl font-mono font-bold text-primary tracking-widest">
                     {showShareResult.code}
                   </code>
-                  <button
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
                     onClick={handleCopyShareCode}
-                    className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-md"
                     title="Copy code"
                   >
                     <svg
@@ -499,25 +504,27 @@ export default function InputView({
                         d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"
                       />
                     </svg>
-                  </button>
+                  </Button>
                 </div>
               </div>
 
               {/* URL display */}
               <div>
-                <label className="block text-sm font-medium text-gray-500 mb-1">
+                <label className="block text-sm font-medium text-muted-foreground mb-1">
                   URL
                 </label>
                 <div className="flex items-center gap-2">
-                  <input
+                  <Input
                     type="text"
                     readOnly
                     value={showShareResult.url}
-                    className="flex-1 px-3 py-2 text-sm font-mono bg-gray-50 border border-gray-200 rounded-md"
+                    className="flex-1 font-mono text-sm"
                   />
-                  <button
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
                     onClick={handleCopyShareUrl}
-                    className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-md"
                     title="Copy URL"
                   >
                     <svg
@@ -533,12 +540,12 @@ export default function InputView({
                         d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"
                       />
                     </svg>
-                  </button>
+                  </Button>
                 </div>
               </div>
 
               {/* Expiration notice */}
-              <p className="text-sm text-gray-500">
+              <p className="text-sm text-muted-foreground">
                 Expires:{" "}
                 {new Date(showShareResult.expiresAt).toLocaleDateString()} (
                 {Math.ceil(
@@ -548,20 +555,17 @@ export default function InputView({
                 days)
               </p>
             </div>
+          )}
 
-            <button
-              onClick={() => setShowShareResult(null)}
-              className="mt-6 w-full px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700"
-            >
-              Done
-            </button>
-          </div>
-        </div>
-      )}
+          <Button onClick={() => setShowShareResult(null)} className="mt-6 w-full">
+            Done
+          </Button>
+        </DialogContent>
+      </Dialog>
 
       {/* Error toast */}
       {(shareErrorMessage || error) && (
-        <div className="fixed bottom-4 right-4 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg shadow-lg">
+        <div className="fixed bottom-4 right-4 bg-destructive/10 border border-destructive/40 text-destructive px-4 py-3 rounded-lg shadow-lg">
           {shareErrorMessage || error}
         </div>
       )}

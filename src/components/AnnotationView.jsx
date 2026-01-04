@@ -4,6 +4,10 @@ import remarkGfm from 'remark-gfm'
 import CommentDialog from './CommentDialog'
 import AnnotationList from './AnnotationList'
 import { trackEvent } from '../utils/analytics'
+import { Button } from '@/components/ui/button'
+import { Badge } from '@/components/ui/badge'
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog'
+import { Textarea } from '@/components/ui/textarea'
 
 const FEEDBACK_SETTINGS_KEY = 'markdown_annotator_feedback_settings_v1'
 const DEFAULT_FEEDBACK_SETTINGS = {
@@ -340,40 +344,44 @@ export default function AnnotationView({
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-muted/30">
       {/* Floating toolbar */}
-      <div className="fixed top-4 left-1/2 -translate-x-1/2 z-40 bg-white rounded-full shadow-lg border border-gray-200 px-2 py-1.5 flex flex-wrap items-center justify-center gap-1 max-w-[calc(100vw-2rem)]">
-        <button
+      <div className="fixed top-4 left-1/2 -translate-x-1/2 z-40 bg-background rounded-full shadow-lg border border-border px-2 py-1.5 flex flex-wrap items-center justify-center gap-1 max-w-[calc(100vw-2rem)]">
+        <Button
           onClick={onBackToEdit}
-          className="px-3 py-1.5 text-sm font-medium text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-full transition-colors"
+          variant="ghost"
+          size="sm"
+          className="rounded-full"
         >
           ← Edit
-        </button>
+        </Button>
 
-        <div className="w-px h-5 bg-gray-200" />
+        <div className="w-px h-5 bg-border" />
 
-        <button
+        <Button
           onClick={() => setShowAnnotations(!showAnnotations)}
-          className={`px-3 py-1.5 text-sm font-medium rounded-full transition-colors flex items-center gap-1.5 ${
-            showAnnotations ? 'text-blue-600 bg-blue-50' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
-          }`}
+          variant={showAnnotations ? 'secondary' : 'ghost'}
+          size="sm"
+          className="rounded-full flex items-center gap-1.5"
         >
           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z" />
           </svg>
           {annotations.length > 0 && (
-            <span className="bg-blue-600 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
+            <Badge variant="secondary" className="h-5 w-5 justify-center rounded-full px-0 text-[11px]">
               {annotations.length}
-            </span>
+            </Badge>
           )}
-        </button>
+        </Button>
 
-        <div className="w-px h-5 bg-gray-200" />
+        <div className="w-px h-5 bg-border" />
 
-        <button
+        <Button
           onClick={handleCopyFeedback}
           disabled={annotations.length === 0}
-          className="px-3 py-1.5 text-sm font-medium text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-full transition-colors disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-1.5"
+          variant="ghost"
+          size="sm"
+          className="rounded-full flex items-center gap-1.5"
         >
           {copySuccess ? (
             <>
@@ -397,19 +405,19 @@ export default function AnnotationView({
               Copy All
             </>
           )}
-        </button>
+        </Button>
       </div>
 
       {/* Hint text */}
       <div
-        className={`fixed bottom-4 left-1/2 -translate-x-1/2 z-40 text-sm text-gray-400 pointer-events-none text-center px-4 ${
+        className={`fixed bottom-4 left-1/2 -translate-x-1/2 z-40 text-sm text-muted-foreground pointer-events-none text-center px-4 ${
           (showTooltip || showCommentDialog) && isMobile ? 'opacity-0' : ''
         }`}
       >
         <span className="hidden sm:inline">Select text to add feedback</span>
         <span className="sm:hidden">Long-press to select, tap + to comment</span>
       </div>
-      <div className="fixed bottom-12 left-1/2 -translate-x-1/2 z-40 text-[11px] text-gray-400 pointer-events-none text-center px-4">
+      <div className="fixed bottom-12 left-1/2 -translate-x-1/2 z-40 text-[11px] text-muted-foreground pointer-events-none text-center px-4">
         <span className="inline-flex items-center gap-2">
           <span className="w-6 h-3 rounded-sm annotation-mark annotation-mark-multi" aria-hidden="true" />
           Overlapping comments
@@ -421,7 +429,7 @@ export default function AnnotationView({
         <div
           ref={contentRef}
           tabIndex={-1}
-          className="annotation-content bg-white rounded-xl shadow-sm border border-gray-200 p-8 md:p-12 prose prose-slate max-w-none"
+          className="annotation-content bg-card text-card-foreground rounded-xl shadow-sm border border-border p-8 md:p-12 prose prose-slate max-w-none"
           onContextMenu={(e) => e.preventDefault()}
         >
           <Markdown
@@ -516,7 +524,7 @@ export default function AnnotationView({
             bottom: isMobile ? 'calc(env(safe-area-inset-bottom, 0px) + 72px)' : 'auto',
             transform: isMobile ? 'translateX(-50%)' : 'none',
           }}
-          className="z-50 w-10 h-10 bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white rounded-full shadow-lg flex items-center justify-center transition-colors touch-manipulation select-none"
+          className="z-50 w-10 h-10 bg-primary text-primary-foreground rounded-full shadow-lg flex items-center justify-center transition-colors hover:bg-primary/90 touch-manipulation select-none"
           aria-label="Add comment"
         >
           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -539,32 +547,28 @@ export default function AnnotationView({
         />
       )}
 
-      {copyFallbackText && (
-        <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4">
-          <div className="bg-white rounded-xl shadow-2xl border border-gray-200 w-full max-w-lg p-4">
-            <div className="flex items-center justify-between mb-3">
-              <h2 className="text-sm font-semibold text-gray-900">Copy feedback</h2>
-              <button
-                onClick={() => setCopyFallbackText(null)}
-                className="text-gray-400 hover:text-gray-600"
-                aria-label="Close"
-              >
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                </svg>
-              </button>
-            </div>
-            <p className="text-xs text-gray-500 mb-2">Clipboard access failed — copy manually below.</p>
-            <textarea
-              readOnly
-              rows={8}
-              value={copyFallbackText}
-              onFocus={(e) => e.target.select()}
-              className="w-full p-2 text-xs font-mono border border-gray-200 rounded-md bg-gray-50"
-            />
-          </div>
-        </div>
-      )}
+      <Dialog
+        open={Boolean(copyFallbackText)}
+        onOpenChange={(open) => {
+          if (!open) setCopyFallbackText(null)
+        }}
+      >
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Copy feedback</DialogTitle>
+            <DialogDescription>
+              Clipboard access failed — copy manually below.
+            </DialogDescription>
+          </DialogHeader>
+          <Textarea
+            readOnly
+            rows={8}
+            value={copyFallbackText || ''}
+            onFocus={(e) => e.target.select()}
+            className="w-full font-mono text-xs"
+          />
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

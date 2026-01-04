@@ -5,6 +5,7 @@ import { API_URL } from './config'
 import { decodeMarkdownFromUrl } from './utils/markdownShare'
 import { parseShareErrorResponse, parseShareNetworkError } from './utils/shareErrors'
 import { trackEvent } from './utils/analytics'
+import { Button } from '@/components/ui/button'
 
 const SAMPLE_MARKDOWN = `# Project Specification
 
@@ -396,10 +397,10 @@ function App() {
   // Loading state
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="min-h-screen bg-muted/30 flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">Loading shared document...</p>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+          <p className="text-muted-foreground">Loading shared document...</p>
         </div>
       </div>
     )
@@ -408,13 +409,13 @@ function App() {
   // Error state (for share code errors)
   if (shareLoadError && shareLoadOrigin === 'link') {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="min-h-screen bg-muted/30 flex items-center justify-center">
         <div className="text-center max-w-md mx-auto p-6">
-          <div className="text-red-500 text-5xl mb-4">!</div>
-          <h1 className="text-xl font-semibold text-gray-900 mb-2">Could not load shared document</h1>
-          <p className="text-gray-600 mb-6">{shareLoadError.message}</p>
-          <p className="text-sm text-gray-500 mb-6">Check the 6-character code or start a fresh session.</p>
-          <button
+          <div className="text-destructive text-5xl mb-4">!</div>
+          <h1 className="text-xl font-semibold text-foreground mb-2">Could not load shared document</h1>
+          <p className="text-muted-foreground mb-6">{shareLoadError.message}</p>
+          <p className="text-sm text-muted-foreground mb-6">Check the 6-character code or start a fresh session.</p>
+          <Button
             onClick={() => {
               setShareLoadError(null)
               setShareLoadOrigin(null)
@@ -422,17 +423,16 @@ function App() {
               url.searchParams.delete('c')
               window.history.replaceState({}, '', url)
             }}
-            className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700"
           >
             Start Fresh
-          </button>
+          </Button>
         </div>
       </div>
     )
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-muted/30">
       {currentView === 'input' ? (
         <InputView
           content={markdownContent}
